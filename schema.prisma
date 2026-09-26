@@ -1,0 +1,68 @@
+// SAT Math 2026 - Prisma schema
+// Currently used for persistence of student progress on the server.
+// Client-side progress is also mirrored to localStorage for offline support.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  answers       StudentAnswer[]
+  quizAttempts  QuizAttempt[]
+  achievements StudentAchievement[]
+}
+
+model StudentAnswer {
+  id         String   @id @default(cuid())
+  studentId  String
+  chapterId  String
+  moduleId   String
+  questionN  Int
+  choice     String   // "A" | "B" | "C" | "D"
+  isCorrect  Boolean
+  answeredAt DateTime @default(now())
+  stopwatchSec Int    @default(0)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, chapterId, moduleId, questionN])
+  @@index([studentId, moduleId])
+}
+
+model QuizAttempt {
+  id            String   @id @default(cuid())
+  studentId     String
+  chapterId     String
+  startedAt     DateTime @default(now())
+  submittedAt   DateTime?
+  scorePercent  Int?
+  correctCount  Int?
+  totalCount    Int?
+  durationSec   Int?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, chapterId])
+}
+
+model StudentAchievement {
+  id         String   @id @default(cuid())
+  studentId  String
+  key        String   // e.g. "first-lesson", "ten-questions"
+  unlockedAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, key])
+}
